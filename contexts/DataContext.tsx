@@ -50,7 +50,6 @@ const initialProfileData: ProfileData = {
     salaryLedger: DEFAULT_SALARY_LEDGER,
 };
 
-
 interface AppState {
     isLoading: boolean;
     googleUser: any | null;
@@ -131,106 +130,30 @@ const appReducer = (state: AppState, action: Action): AppState => {
         case 'SELECT_PROFILE': return { ...state, activeProfileId: action.payload };
         case 'LOGOUT': return { ...initialState, isLoading: false };
         case 'SET_PROFILE_STATE': return updateActiveProfileData(action.payload);
-        
-        // --- Profile-specific actions ---
-        case 'ADD_ACCOUNT':
-            if (!activeData) return state;
-            return updateActiveProfileData({ accounts: [...activeData.accounts, action.payload] });
-        case 'UPDATE_ACCOUNT':
-             if (!activeData) return state;
-            return updateActiveProfileData({
-                accounts: activeData.accounts.map(acc => acc.id === action.payload.id ? action.payload : acc),
-            });
-        case 'DELETE_ACCOUNT':
-             if (!activeData) return state;
-            return updateActiveProfileData({
-                accounts: activeData.accounts.filter(acc => acc.id !== action.payload),
-            });
-        case 'ADD_JOURNAL_ENTRY':
-            if (!activeData) return state;
-            return updateActiveProfileData({
-                journalEntries: [...activeData.journalEntries, action.payload].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
-            });
-        case 'UPDATE_JOURNAL_ENTRY':
-            if (!activeData) return state;
-            return updateActiveProfileData({
-                journalEntries: activeData.journalEntries.map(entry =>
-                    entry.id === action.payload.id ? action.payload : entry
-                ).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
-            });
-        case 'DELETE_JOURNAL_ENTRY':
-             if (!activeData) return state;
-            return updateActiveProfileData({
-                journalEntries: activeData.journalEntries.filter(entry => entry.id !== action.payload),
-            });
-        case 'MERGE_JOURNAL_ENTRIES':
-            if (!activeData) return state;
-            const existingIds = new Set(activeData.journalEntries.map(entry => entry.id));
-            const newEntries = action.payload.filter(entry => !existingIds.has(entry.id));
-            if (newEntries.length === 0) return state;
-            return updateActiveProfileData({
-                journalEntries: [...activeData.journalEntries, ...newEntries]
-                    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
-            });
-
-        // Add cases for other profile-specific actions similarly...
-        case 'UPDATE_MEMOS_BY_ACCOUNT': {
-             if (!activeData) return state;
-            const { accountId, oldMemo, newMemo } = action.payload;
-            const updatedJournalEntries = activeData.journalEntries.map(entry => ({
-                ...entry,
-                lines: entry.lines.map(line => {
-                    if (line.accountId === accountId && line.memo === oldMemo) {
-                        return { ...line, memo: newMemo };
-                    }
-                    return line;
-                }),
-            }));
-            return updateActiveProfileData({ journalEntries: updatedJournalEntries });
-        }
-        case 'ADD_CREDIT_CARD_LEDGER':
-             if (!activeData) return state;
-            return updateActiveProfileData({ creditCardLedgers: [...activeData.creditCardLedgers, action.payload] });
-        case 'UPDATE_CREDIT_CARD_LEDGER':
-             if (!activeData) return state;
-            return updateActiveProfileData({
-                creditCardLedgers: activeData.creditCardLedgers.map(l => l.id === action.payload.id ? action.payload : l),
-            });
-        case 'DELETE_CREDIT_CARD_LEDGER':
-            if (!activeData) return state;
-             return updateActiveProfileData({
-                creditCardLedgers: activeData.creditCardLedgers.filter(l => l.id !== action.payload),
-            });
-        case 'ADD_AMORTIZATION_ITEM':
-            if (!activeData) return state;
-            return updateActiveProfileData({amortizationItems: [...activeData.amortizationItems, action.payload]});
-        case 'UPDATE_AMORTIZATION_ITEM':
-            if (!activeData) return state;
-            return updateActiveProfileData({
-                amortizationItems: activeData.amortizationItems.map(i => i.id === action.payload.id ? action.payload : i)
-            });
-        case 'DELETE_AMORTIZATION_ITEM':
-            if (!activeData) return state;
-            return updateActiveProfileData({
-                amortizationItems: activeData.amortizationItems.filter(i => i.id !== action.payload)
-            });
-        
-        // ... all other actions like salary, memos, etc.
-        case 'UPDATE_SALARY_LEDGER':
-            if (!activeData) return state;
-            return updateActiveProfileData({ salaryLedger: action.payload });
-        case 'RESET_SALARY_LEDGER':
-             if (!activeData) return state;
-            return updateActiveProfileData({ salaryLedger: DEFAULT_SALARY_LEDGER });
-        default:
-            return state;
+        case 'ADD_ACCOUNT': if (!activeData) return state; return updateActiveProfileData({ accounts: [...activeData.accounts, action.payload] });
+        case 'UPDATE_ACCOUNT': if (!activeData) return state; return updateActiveProfileData({ accounts: activeData.accounts.map(acc => acc.id === action.payload.id ? action.payload : acc) });
+        case 'DELETE_ACCOUNT': if (!activeData) return state; return updateActiveProfileData({ accounts: activeData.accounts.filter(acc => acc.id !== action.payload) });
+        case 'ADD_JOURNAL_ENTRY': if (!activeData) return state; return updateActiveProfileData({ journalEntries: [...activeData.journalEntries, action.payload].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)) });
+        case 'UPDATE_JOURNAL_ENTRY': if (!activeData) return state; return updateActiveProfileData({ journalEntries: activeData.journalEntries.map(entry => entry.id === action.payload.id ? action.payload : entry).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)) });
+        case 'DELETE_JOURNAL_ENTRY': if (!activeData) return state; return updateActiveProfileData({ journalEntries: activeData.journalEntries.filter(entry => entry.id !== action.payload) });
+        case 'MERGE_JOURNAL_ENTRIES': if (!activeData) return state; const existingIds = new Set(activeData.journalEntries.map(entry => entry.id)); const newEntries = action.payload.filter(entry => !existingIds.has(entry.id)); if (newEntries.length === 0) return state; return updateActiveProfileData({ journalEntries: [...activeData.journalEntries, ...newEntries].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)) });
+        case 'UPDATE_MEMOS_BY_ACCOUNT': if (!activeData) return state; const { accountId, oldMemo, newMemo } = action.payload; const updatedJournalEntries = activeData.journalEntries.map(entry => ({ ...entry, lines: entry.lines.map(line => line.accountId === accountId && line.memo === oldMemo ? { ...line, memo: newMemo } : line) })); return updateActiveProfileData({ journalEntries: updatedJournalEntries });
+        case 'ADD_CREDIT_CARD_LEDGER': if (!activeData) return state; return updateActiveProfileData({ creditCardLedgers: [...activeData.creditCardLedgers, action.payload] });
+        case 'UPDATE_CREDIT_CARD_LEDGER': if (!activeData) return state; return updateActiveProfileData({ creditCardLedgers: activeData.creditCardLedgers.map(l => l.id === action.payload.id ? action.payload : l) });
+        case 'DELETE_CREDIT_CARD_LEDGER': if (!activeData) return state; return updateActiveProfileData({ creditCardLedgers: activeData.creditCardLedgers.filter(l => l.id !== action.payload) });
+        case 'ADD_AMORTIZATION_ITEM': if (!activeData) return state; return updateActiveProfileData({ amortizationItems: [...activeData.amortizationItems, action.payload] });
+        case 'UPDATE_AMORTIZATION_ITEM': if (!activeData) return state; return updateActiveProfileData({ amortizationItems: activeData.amortizationItems.map(i => i.id === action.payload.id ? action.payload : i) });
+        case 'DELETE_AMORTIZATION_ITEM': if (!activeData) return state; return updateActiveProfileData({ amortizationItems: activeData.amortizationItems.filter(i => i.id !== action.payload) });
+        case 'UPDATE_SALARY_LEDGER': if (!activeData) return state; return updateActiveProfileData({ salaryLedger: action.payload });
+        case 'RESET_SALARY_LEDGER': if (!activeData) return state; return updateActiveProfileData({ salaryLedger: DEFAULT_SALARY_LEDGER });
+        default: return state;
     }
 };
 
 interface DataContextType {
     state: AppState;
     dispatch: React.Dispatch<Action>;
-    data: ProfileData; // Convenience accessor for active profile data
+    data: ProfileData;
     activeProfile: UserProfile | null;
     googleSignIn: () => void;
     googleSignOut: () => void;
@@ -244,201 +167,57 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [state, dispatch] = useReducer(appReducer, initialState);
 
     const initGapiClient = useCallback(() => {
-        window.gapi.client.init({
-            apiKey: GOOGLE_API_KEY,
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-        }).catch((err:any) => console.error("Error initializing gapi client:", err));
+        window.gapi.client.init({ apiKey: GOOGLE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }).catch((err:any) => console.error("Error initializing gapi client:", err));
     }, []);
 
     const initGsiClient = useCallback(() => {
         if (!window.google) return;
-        window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: (response: any) => {
-                const userObject = JSON.parse(atob(response.credential.split('.')[1]));
-                dispatch({ type: 'SET_GOOGLE_USER', payload: userObject });
-            },
-        });
-        
-        window.tokenClient = window.google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: DRIVE_SCOPES,
-            callback: '', // defined dynamically
-        });
+        window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: (response: any) => { const userObject = JSON.parse(atob(response.credential.split('.')[1])); dispatch({ type: 'SET_GOOGLE_USER', payload: userObject }); } });
+        window.tokenClient = window.google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPES, callback: undefined });
     }, []);
 
-    // --- Google API Initialization ---
     useEffect(() => {
-        // gapi script is loaded from index.html
-        if (window.gapi) {
-            window.gapi.load('client', initGapiClient);
-        } else {
-            // Poll for gapi if it's not ready yet
-            const gapiInterval = setInterval(() => {
-                if (window.gapi) {
-                    clearInterval(gapiInterval);
-                    window.gapi.load('client', initGapiClient);
-                }
-            }, 100);
-        }
-
-        // gsi script is loaded from index.html
-        if (window.google) {
-            initGsiClient();
-        } else {
-             const gsiInterval = setInterval(() => {
-                if (window.google) {
-                    clearInterval(gsiInterval);
-                    initGsiClient();
-                }
-            }, 100);
-        }
-
+        if (window.gapi) window.gapi.load('client', initGapiClient);
+        else { const gapiInterval = setInterval(() => { if (window.gapi) { clearInterval(gapiInterval); window.gapi.load('client', initGapiClient); } }, 100); }
+        if (window.google) initGsiClient();
+        else { const gsiInterval = setInterval(() => { if (window.google) { clearInterval(gsiInterval); initGsiClient(); } }, 100); }
     }, [initGapiClient, initGsiClient]);
 
-
-    // --- Local Storage Persistence ---
     useEffect(() => {
-        try {
-            const savedStateJSON = localStorage.getItem('accountingAppState');
-            if (savedStateJSON) {
-                const savedState = JSON.parse(savedStateJSON);
-                dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: { profiles: savedState.profiles || [], data: savedState.data || {} } });
-            }
-        } catch (error) {
-            console.error("Failed to load state from localStorage", error);
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: false });
-        }
+        try { const savedStateJSON = localStorage.getItem('accountingAppState'); if (savedStateJSON) { const savedState = JSON.parse(savedStateJSON); dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: { profiles: savedState.profiles || [], data: savedState.data || {} } }); } } catch (error) { console.error("Failed to load state from localStorage", error); } finally { dispatch({ type: 'SET_LOADING', payload: false }); }
     }, []);
 
-    useEffect(() => {
-        try {
-            const stateToSave = { profiles: state.profiles, data: state.data };
-            localStorage.setItem('accountingAppState', JSON.stringify(stateToSave));
-        } catch (error) {
-            console.error("Failed to save state to localStorage", error);
-        }
-    }, [state.profiles, state.data]);
+    useEffect(() => { try { localStorage.setItem('accountingAppState', JSON.stringify({ profiles: state.profiles, data: state.data })); } catch (error) { console.error("Failed to save state to localStorage", error); } }, [state.profiles, state.data]);
 
-    // --- Auth and Drive Methods ---
-    const googleSignIn = useCallback(() => {
-        if (window.google && window.google.accounts) {
-           window.google.accounts.id.prompt();
-        } else {
-            alert("Google Sign-In is not ready yet. Please try again in a moment.");
-        }
-    }, []);
+    const googleSignIn = useCallback(() => { if (window.google && window.google.accounts) window.google.accounts.id.prompt(); else alert("Google Sign-In is not ready yet. Please try again in a moment."); }, []);
+    const googleSignOut = useCallback(() => { dispatch({ type: 'LOGOUT' }); }, []);
 
-    const googleSignOut = useCallback(() => {
-        dispatch({ type: 'LOGOUT' });
-    }, []);
-
-    const getFileId = async (): Promise<string | undefined> => {
-        const response = await window.gapi.client.drive.files.list({
-            q: `name='${BACKUP_FILE_NAME}' and trashed=false`,
-            fields: 'files(id, name)',
-            spaces: 'drive'
-        });
-        return response.result.files.length > 0 ? response.result.files[0].id : undefined;
-    };
+    const getFileId = async (): Promise<string | undefined> => { const response = await window.gapi.client.drive.files.list({ q: `name='${BACKUP_FILE_NAME}' and trashed=false`, fields: 'files(id, name)', spaces: 'drive' }); return response.result.files?.length > 0 ? response.result.files[0].id : undefined; };
 
     const saveToCloud = async () => {
         const stateToSave = { profiles: state.profiles, data: state.data };
         const content = JSON.stringify(stateToSave, null, 2);
         const blob = new Blob([content], { type: 'application/json' });
-
         const fileId = await getFileId();
-
         const form = new FormData();
-        if (fileId) { // Update existing file
-            const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json' };
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', blob);
-            
-            await window.gapi.client.request({
-                path: `/upload/drive/v3/files/${fileId}`,
-                method: 'PATCH',
-                params: { uploadType: 'multipart' },
-                body: form
-            });
-        } else { // Create new file
-            const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json', parents: ['root'] };
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', blob);
-            
-            await window.gapi.client.request({
-                path: '/upload/drive/v3/files',
-                method: 'POST',
-                params: { uploadType: 'multipart' },
-                body: form
-            });
-        }
-    };
-    
-    const requestAccessToken = async () => {
-        return new Promise((resolve, reject) => {
-            if (!window.tokenClient) {
-                reject(new Error("Google Token Client not initialized."));
-                return;
-            }
-            window.tokenClient.callback = (resp: any) => {
-                if (resp.error) reject(resp);
-                resolve(resp);
-            };
-            window.tokenClient.requestAccessToken({ prompt: '' });
-        });
+        if (fileId) { const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json' }; form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); await window.gapi.client.request({ path: `/upload/drive/v3/files/${fileId}`, method: 'PATCH', params: { uploadType: 'multipart' }, body: form }); } 
+        else { const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json', parents: ['root'] }; form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); await window.gapi.client.request({ path: '/upload/drive/v3/files', method: 'POST', params: { uploadType: 'multipart' }, body: form }); }
     };
 
-    const handleCloudAction = async (action: () => Promise<void>) => {
-        dispatch({ type: 'SET_LOADING', payload: true });
-        try {
-            await requestAccessToken();
-            await action();
-            alert('操作成功！');
-        } catch (error: any) {
-            console.error("Cloud action failed", error);
-            alert(`操作失敗: ${error.details || error.message || '未知錯誤'}`);
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: false });
-        }
-    };
-    
-    const restoreFromCloud = async () => {
-        const fileId = await getFileId();
-        if (!fileId) throw new Error("在您的雲端硬碟找不到備份檔案。");
+    const requestAccessToken = async () => new Promise((resolve, reject) => { if (!window.tokenClient) { reject(new Error("Google Token Client not initialized.")); return; } window.tokenClient.callback = (resp: any) => resp.error ? reject(resp) : resolve(resp); window.tokenClient.requestAccessToken({ prompt: '' }); });
 
-        const response = await window.gapi.client.drive.files.get({
-            fileId: fileId,
-            alt: 'media'
-        });
-        const backupState = response.result;
-        dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: { profiles: backupState.profiles || [], data: backupState.data || {} } });
-    };
+    const handleCloudAction = async (action: () => Promise<void>) => { dispatch({ type: 'SET_LOADING', payload: true }); try { await requestAccessToken(); await action(); alert('操作成功！'); } catch (error: any) { console.error("Cloud action failed", error); alert(`操作失敗: ${error.details || error.message || '未知錯誤'}`); } finally { dispatch({ type: 'SET_LOADING', payload: false }); } };
+
+    const restoreFromCloud = async () => { const fileId = await getFileId(); if (!fileId) throw new Error("在您的雲端硬碟找不到備份檔案。"); const response = await window.gapi.client.drive.files.get({ fileId, alt: 'media' }); const backupState = response.result; dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: { profiles: backupState.profiles || [], data: backupState.data || {} } }); };
 
     const activeProfile = state.activeProfileId ? state.profiles.find(p => p.id === state.activeProfileId) ?? null : null;
     const data = state.activeProfileId ? state.data[state.activeProfileId] || initialProfileData : initialProfileData;
 
     return (
-        <DataContext.Provider value={{
-            state,
-            dispatch,
-            data,
-            activeProfile,
-            googleSignIn,
-            googleSignOut,
-            saveToCloud: () => handleCloudAction(saveToCloud),
-            restoreFromCloud: () => handleCloudAction(restoreFromCloud)
-        }}>
+        <DataContext.Provider value={{ state, dispatch, data, activeProfile, googleSignIn, googleSignOut, saveToCloud: () => handleCloudAction(saveToCloud), restoreFromCloud: () => handleCloudAction(restoreFromCloud) }}>
             {children}
         </DataContext.Provider>
     );
 };
 
-export const useData = () => {
-    const context = useContext(DataContext);
-    if (!context) {
-        throw new Error('useData must be used within a DataProvider');
-    }
-    return context;
-};
+export const useData = () => { const context = useContext(DataContext); if (!context) throw new Error('useData must be used within a DataProvider'); return context; };
