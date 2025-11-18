@@ -1,0 +1,5 @@
+{
+  "name": "家庭記帳 APP",
+  "description": "一個功能齊全的家庭會計軟體，用於管理日記帳、會計科目和財務報告。A full-featured home accounting software to manage journal entries, chart of accounts, and financial reports.",
+  "requestFramePermissions": []
+}
