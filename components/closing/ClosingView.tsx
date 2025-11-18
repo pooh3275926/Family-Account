@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import { Zap } from 'lucide-react';
@@ -61,14 +60,17 @@ const ClosingView: React.FC = () => {
             const balance = balances.get(account.id) || 0;
             if (Math.abs(balance) < 0.001) continue;
 
-            const isIncomeType = ['4', '7'].includes(account.id[0]);
-             if (isIncomeType) { // Income has credit balance (negative in our map)
-                netIncome += -balance; 
-                closingLines.push({ accountId: account.id, debit: -balance, credit: 0, memo: '結轉損益' });
-            } else { // Expense has debit balance (positive in our map)
-                netIncome -= balance; 
+            // balance = total_debit - total_credit
+            if (balance > 0) {
+                // Debit balance, so credit to close
                 closingLines.push({ accountId: account.id, debit: 0, credit: balance, memo: '結轉損益' });
+            } else {
+                // Credit balance, so debit to close
+                closingLines.push({ accountId: account.id, debit: -balance, credit: 0, memo: '結轉損益' });
             }
+            
+            // Net income = SUM(credits) - SUM(debits) for P&L accounts = -SUM(debit - credit) = -SUM(balance)
+            netIncome -= balance;
         }
 
         if (closingLines.length === 0) {

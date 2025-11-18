@@ -80,7 +80,8 @@ const MemoManagerView: React.FC = () => {
                     const account = accounts.find(a => a.id === line.accountId);
                     memoMap.set(line.accountId, {
                         accountName: account ? `${line.accountId} - ${account.name}` : line.accountId,
-                        memos: new Map()
+                        // FIX: Add generic type to `new Map()` constructor to fix type inference error.
+                        memos: new Map<string, number>()
                     });
                 }
                 const accountMemos = memoMap.get(line.accountId)!.memos;
@@ -101,7 +102,6 @@ const MemoManagerView: React.FC = () => {
                     memo.toLowerCase().includes(lowerSearch)
                 );
                 if (data.accountName.toLowerCase().includes(lowerSearch) || filteredMemoEntries.length > 0) {
-                     // FIX: Add generic type to `new Map()` constructor to fix type inference error.
                      return [accountId, { ...data, memos: new Map<string, number>(filteredMemoEntries) }];
                 }
                 return null;
