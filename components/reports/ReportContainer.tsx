@@ -30,12 +30,13 @@ const ReportContainer: React.FC<ReportContainerProps> = ({ title, controls, chil
                         display: none !important;
                     }
                     .printable-area {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
+                        position: static !important;
+                        overflow: visible !important;
+                        height: auto !important;
                         width: 100% !important;
                         padding: 1rem !important;
                         margin: 0 !important;
+                        box-shadow: none !important;
                         background: white !important;
                         color: black !important;
                         -webkit-print-color-adjust: exact;
