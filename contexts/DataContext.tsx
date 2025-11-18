@@ -198,23 +198,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const stateToSave = { profiles: state.profiles, data: state.data };
     const content = JSON.stringify(stateToSave, null, 2);
 
-    // 取得舊檔案 ID
     const fileId = await getFileId();
 
     if (fileId) {
-        // 用 PATCH 更新舊檔案
+        // 更新已存在的檔案
         await window.gapi.client.drive.files.update({
             fileId,
+            resource: { name: BACKUP_FILE_NAME },
             media: {
                 mimeType: 'application/json',
                 body: content,
             },
-            resource: {
-                name: BACKUP_FILE_NAME,
-            },
         });
     } else {
-        // 用 POST 建立新檔案
+        // 建立新檔案
         await window.gapi.client.drive.files.create({
             resource: {
                 name: BACKUP_FILE_NAME,
@@ -228,6 +225,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     }
 };
+
 
 
     const requestAccessToken = async () => new Promise((resolve, reject) => { if (!window.tokenClient) { reject(new Error("Google Token Client not initialized.")); return; } window.tokenClient.callback = (resp: any) => resp.error ? reject(resp) : resolve(resp); window.tokenClient.requestAccessToken({ prompt: '' }); });
