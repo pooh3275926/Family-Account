@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Account, JournalEntry, CreditCardLedger, AmortizationItem, PrepaymentItem, ReceivedPaymentItem, ManagedMemo, SalaryLedgerLine } from '../types';
 import { INITIAL_ACCOUNTS } from '../constants';
@@ -52,6 +53,7 @@ type Action =
     | { type: 'UPDATE_MANAGED_MEMO', payload: ManagedMemo }
     | { type: 'DELETE_MANAGED_MEMO', payload: string }
     | { type: 'UPDATE_MEMOS_BY_ACCOUNT', payload: { accountId: string; oldMemo: string; newMemo: string } }
+    | { type: 'MERGE_DATA'; payload: { newAccounts: Account[]; newJournalEntries: JournalEntry[] } }
     | { type: 'UPDATE_SALARY_LEDGER', payload: SalaryLedgerLine[] }
     | { type: 'RESET_SALARY_LEDGER' };
 
@@ -125,6 +127,15 @@ const appReducer = (state: AppState, action: Action): AppState => {
                 }),
             }));
             return { ...state, journalEntries: updatedJournalEntries };
+        }
+        case 'MERGE_DATA': {
+            const { newAccounts, newJournalEntries } = action.payload;
+            return {
+                ...state,
+                accounts: [...state.accounts, ...newAccounts],
+                journalEntries: [...state.journalEntries, ...newJournalEntries]
+                    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
+            };
         }
         case 'ADD_CREDIT_CARD_LEDGER':
             return { ...state, creditCardLedgers: [...state.creditCardLedgers, action.payload] };
