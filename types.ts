@@ -1,3 +1,4 @@
+
 export interface Account {
   id: string; // 科目編號
   name: string; // 科目名稱
@@ -17,8 +18,6 @@ export interface JournalEntry {
   id: string; // 傳票編號
   date: string; // yyyy-mm-dd
   lines: JournalLine[];
-  createdBy?: string; // User profile name
-  lastModifiedBy?: string; // User profile name
 }
 
 export interface CreditCardTransaction {
@@ -72,9 +71,4 @@ export interface ManagedMemo {
 export interface SalaryLedgerLine {
     accountId: string;
     memo: string;
-}
-
-export interface UserProfile {
-  id: string;
-  name: string;
 }
