@@ -20,6 +20,12 @@ const ReportContainer: React.FC<ReportContainerProps> = ({ title, controls, chil
         <div className={`${containerClasses} ${isFullScreen ? 'printable-area' : ''}`}>
             <style>{`
                 @media print {
+                    /* Fix for printing truncated content by ensuring no parent elements are clipping the content. */
+                    body, #root > div, main {
+                        overflow: visible !important;
+                        height: auto !important;
+                    }
+
                     body * {
                         visibility: hidden;
                     }
