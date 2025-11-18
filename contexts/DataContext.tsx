@@ -197,27 +197,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const saveToCloud = async () => {
     const stateToSave = { profiles: state.profiles, data: state.data };
     const content = JSON.stringify(stateToSave, null, 2);
-    const blob = new Blob([content], { type: 'application/json' });
 
+    // 取得舊檔案 ID
     const fileId = await getFileId();
 
-    // 如果已經有舊檔案，先刪掉
     if (fileId) {
-        await window.gapi.client.drive.files.delete({ fileId });
+        // 用 PATCH 更新舊檔案
+        await window.gapi.client.drive.files.update({
+            fileId,
+            media: {
+                mimeType: 'application/json',
+                body: content,
+            },
+            resource: {
+                name: BACKUP_FILE_NAME,
+            },
+        });
+    } else {
+        // 用 POST 建立新檔案
+        await window.gapi.client.drive.files.create({
+            resource: {
+                name: BACKUP_FILE_NAME,
+                mimeType: 'application/json',
+            },
+            media: {
+                mimeType: 'application/json',
+                body: content,
+            },
+            fields: 'id',
+        });
     }
-
-    // 再建立新檔案
-    const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json', parents: ['root'] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', blob);
-
-    await window.gapi.client.request({
-        path: '/upload/drive/v3/files',
-        method: 'POST',
-        params: { uploadType: 'multipart' },
-        body: form
-    });
 };
 
 
