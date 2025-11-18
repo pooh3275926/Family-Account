@@ -195,14 +195,51 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const getFileId = async (): Promise<string | undefined> => { const response = await window.gapi.client.drive.files.list({ q: `name='${BACKUP_FILE_NAME}' and trashed=false`, fields: 'files(id, name)', spaces: 'drive' }); return response.result.files?.length > 0 ? response.result.files[0].id : undefined; };
 
     const saveToCloud = async () => {
-        const stateToSave = { profiles: state.profiles, data: state.data };
-        const content = JSON.stringify(stateToSave, null, 2);
-        const blob = new Blob([content], { type: 'application/json' });
-        const fileId = await getFileId();
-        const form = new FormData();
-        if (fileId) { const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json' }; form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); await window.gapi.client.request({ path: `/upload/drive/v3/files/${fileId}`, method: 'PATCH', params: { uploadType: 'multipart' }, body: form }); } 
-        else { const metadata = { name: BACKUP_FILE_NAME, mimeType: 'application/json', parents: ['root'] }; form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); await window.gapi.client.request({ path: '/upload/drive/v3/files', method: 'POST', params: { uploadType: 'multipart' }, body: form }); }
+    const stateToSave = { profiles: state.profiles, data: state.data };
+    const content = JSON.stringify(stateToSave, null, 2);
+
+    const fileId = await getFileId();
+
+    const boundary = '-------314159265358979323846';
+    const delimiter = "\r\n--" + boundary + "\r\n";
+    const closeDelimiter = "\r\n--" + boundary + "--";
+
+    const metadata = {
+        name: BACKUP_FILE_NAME,
+        mimeType: 'application/json',
+        parents: ['root'],
     };
+
+    const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        content +
+        closeDelimiter;
+
+    if (fileId) {
+        // Update existing file
+        await window.gapi.client.request({
+            path: `/upload/drive/v3/files/${fileId}`,
+            method: 'PATCH',
+            params: { uploadType: 'multipart' },
+            headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
+            body: multipartRequestBody,
+        });
+    } else {
+        // Create new file
+        await window.gapi.client.request({
+            path: '/upload/drive/v3/files',
+            method: 'POST',
+            params: { uploadType: 'multipart' },
+            headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
+            body: multipartRequestBody,
+        });
+    }
+};
+
 
     const requestAccessToken = async () => new Promise((resolve, reject) => { if (!window.tokenClient) { reject(new Error("Google Token Client not initialized.")); return; } window.tokenClient.callback = (resp: any) => resp.error ? reject(resp) : resolve(resp); window.tokenClient.requestAccessToken({ prompt: '' }); });
 
