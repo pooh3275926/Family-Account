@@ -112,20 +112,20 @@ const JournalView: React.FC = () => {
                                 </div>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-stone-400">
+                                <table className="w-full text-sm text-left table-fixed">
+                                    <thead>
                                         <tr className="border-b border-stone-700">
-                                            <th className="px-4 py-2 font-medium min-w-[150px]">科目</th>
-                                            <th className="px-4 py-2 font-medium min-w-[200px]">備註</th>
-                                            <th className="px-4 py-2 font-medium text-right">借方</th>
-                                            <th className="px-4 py-2 font-medium text-right">貸方</th>
+                                            <th className="px-4 py-2 font-medium text-stone-400 w-[30%]">科目</th>
+                                            <th className="px-4 py-2 font-medium text-stone-400 w-[40%]">備註</th>
+                                            <th className="px-4 py-2 font-medium text-stone-400 text-right w-[15%]">借方</th>
+                                            <th className="px-4 py-2 font-medium text-stone-400 text-right w-[15%]">貸方</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="text-stone-300">
+                                    <tbody className="text-stone-300 align-top">
                                         {entry.lines.map((line, index) => (
                                             <tr key={index} className="border-b border-stone-700 last:border-b-0">
-                                                <td className="px-4 py-2">{line.accountId} - {getAccountName(line.accountId)}</td>
-                                                <td className="px-4 py-2">{line.memo}</td>
+                                                <td className="px-4 py-2 break-words">{line.accountId} - {getAccountName(line.accountId)}</td>
+                                                <td className="px-4 py-2 break-words">{line.memo}</td>
                                                 <td className="px-4 py-2 text-right font-mono">{line.debit ? line.debit.toLocaleString() : ''}</td>
                                                 <td className="px-4 py-2 text-right font-mono">{line.credit ? line.credit.toLocaleString() : ''}</td>
                                             </tr>

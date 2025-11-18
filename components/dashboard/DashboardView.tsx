@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import { ArrowUp, ArrowDown, PiggyBank } from 'lucide-react';
@@ -73,51 +72,6 @@ const TrendChart: React.FC<{ data: { label: string; value: number }[]; stroke: s
     );
 };
 
-
-const DonutChart: React.FC<{ data: { name: string; value: number; color: string }[] }> = ({ data }) => {
-    const total = data.reduce((sum, item) => sum + item.value, 0);
-    if (total === 0) return <div className="flex items-center justify-center h-full text-stone-500">無資料</div>;
-
-    let accumulatedAngle = 0;
-
-    return (
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 h-full">
-            <svg viewBox="0 0 100 100" className="w-32 h-32 transform -rotate-90">
-                 <circle cx="50" cy="50" r="40" fill="transparent" stroke="#44403c" strokeWidth="20" />
-                {data.map((item, index) => {
-                    const percentage = item.value / total;
-                    const angle = percentage * 360;
-                    const strokeDasharray = `${angle} ${360 - angle}`;
-                    const strokeDashoffset = -accumulatedAngle;
-                    accumulatedAngle += angle;
-                    return (
-                        <circle
-                            key={index}
-                            cx="50" cy="50" r="40"
-                            fill="transparent"
-                            stroke={item.color}
-                            strokeWidth="20"
-                            strokeDasharray={strokeDasharray}
-                            strokeDashoffset={strokeDashoffset}
-                            strokeLinecap="round"
-                        />
-                    );
-                })}
-            </svg>
-            <div className="text-sm space-y-2">
-                {data.map((item) => (
-                    <div key={item.name} className="flex items-center">
-                        <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: item.color }}></span>
-                        <span className="truncate flex-1">{item.name}</span>
-                        <span className="font-mono ml-4 text-stone-400">{((item.value / total) * 100).toFixed(1)}%</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
 const DashboardView: React.FC = () => {
     const { state } = useAppContext();
     const { journalEntries, accounts } = state;
@@ -161,10 +115,10 @@ const DashboardView: React.FC = () => {
             entry.lines.forEach(line => {
                 if (line.accountId.startsWith('5') || line.accountId.startsWith('6') || line.accountId.startsWith('72')) {
                     const account = accounts.find(a => a.id === line.accountId);
-                    const accountName = account ? `${account.level3}` : `${line.accountId}-未知`;
-                    const current = expenses.get(accountName) || { name: accountName, total: 0 };
+                    const accountName = account ? `${account.id} - ${account.name}` : `${line.accountId}-未知`;
+                    const current = expenses.get(line.accountId) || { name: accountName, total: 0 };
                     current.total += line.debit;
-                    expenses.set(accountName, current);
+                    expenses.set(line.accountId, current);
                 }
             });
         });
@@ -179,10 +133,10 @@ const DashboardView: React.FC = () => {
             entry.lines.forEach(line => {
                 if (line.accountId.startsWith('4') || line.accountId.startsWith('71')) {
                     const account = accounts.find(a => a.id === line.accountId);
-                    const accountName = account ? `${account.level3}` : `${line.accountId}-未知`;
-                    const current = incomes.get(accountName) || { name: accountName, total: 0 };
+                    const accountName = account ? `${account.id} - ${account.name}` : `${line.accountId}-未知`;
+                    const current = incomes.get(line.accountId) || { name: accountName, total: 0 };
                     current.total += line.credit;
-                    incomes.set(accountName, current);
+                    incomes.set(line.accountId, current);
                 }
             });
         });
@@ -192,65 +146,37 @@ const DashboardView: React.FC = () => {
     }, [filteredEntries, accounts]);
 
     const savingsTrend = useMemo(() => {
-        const SAVINGS_ACCOUNT_ID = '3111';
-        let balanceStartOfYear = 0;
-        journalEntries
-            .filter(e => new Date(e.date).getFullYear() < selectedYear)
-            .forEach(e => {
-                e.lines.forEach(l => {
-                    if (l.accountId === SAVINGS_ACCOUNT_ID) {
-                        balanceStartOfYear += l.credit - l.debit;
+        const yearEntries = journalEntries.filter(entry => 
+            entry.date.startsWith(selectedYear.toString()) &&
+            !entry.lines.some(line => line.memo.includes('結轉損益'))
+        );
+        
+        let cumulativeNetIncome = 0;
+        const trendData = [];
+
+        for (let i = 1; i <= 12; i++) {
+            const monthStr = i.toString().padStart(2, '0');
+            const monthEntries = yearEntries.filter(entry => entry.date.substring(5, 7) === monthStr);
+
+            let monthlyNetIncome = 0;
+            monthEntries.forEach(entry => {
+                entry.lines.forEach(line => {
+                    const accountType = line.accountId[0];
+                    if (['4', '5', '6', '7'].includes(accountType)) {
+                        monthlyNetIncome -= (line.debit - line.credit);
                     }
                 });
             });
+            
+            cumulativeNetIncome += monthlyNetIncome;
 
-        const yearEntries = journalEntries
-            .filter(e => new Date(e.date).getFullYear() === selectedYear)
-            .sort((a,b) => a.date.localeCompare(b.date));
-
-        const monthlyBalances: Record<string, number> = {};
-        let currentBalance = balanceStartOfYear;
-
-        yearEntries.forEach(entry => {
-             entry.lines.forEach(line => {
-                if (line.accountId === SAVINGS_ACCOUNT_ID) {
-                    // FIX: Corrected typo from 'l.debit' to 'line.debit'.
-                    currentBalance += line.credit - line.debit;
-                }
-            });
-            monthlyBalances[entry.date.substring(5, 7)] = currentBalance;
-        });
-
-        const trendData = [];
-        let lastKnownBalance = balanceStartOfYear;
-        for (let i = 1; i <= 12; i++) {
-            const monthKey = i.toString().padStart(2, '0');
-            if (monthlyBalances[monthKey] !== undefined) {
-                lastKnownBalance = monthlyBalances[monthKey];
-            }
             trendData.push({
                 label: `${i}月`,
-                value: lastKnownBalance,
+                value: cumulativeNetIncome,
             });
         }
         return trendData;
     }, [journalEntries, selectedYear]);
-
-
-    const netWorthData = useMemo(() => {
-        const balances = new Map<string, number>();
-        journalEntries.forEach(entry => {
-            entry.lines.forEach(line => {
-                balances.set(line.accountId, (balances.get(line.accountId) || 0) + line.debit - line.credit);
-            });
-        });
-        let assets = 0, liabilities = 0;
-        balances.forEach((balance, accountId) => {
-            if (accountId.startsWith('1')) assets += balance;
-            if (accountId.startsWith('2')) liabilities += -balance; // Liabilities are credit balances
-        });
-        return { assets, liabilities, netWorth: assets - liabilities };
-    }, [journalEntries]);
 
 
     return (
@@ -303,17 +229,11 @@ const DashboardView: React.FC = () => {
                     </div>
                 </Card>
             </div>
-             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <Card title={`${selectedYear}年 本期恩典儲蓄趨勢`} className="lg:col-span-3">
+             <div className="grid grid-cols-1 gap-6">
+                <Card title={`${selectedYear}年 本期恩典儲蓄趨勢（累計）`} className="">
                     <TrendChart data={savingsTrend} stroke="#f97316" />
                 </Card>
-                 <Card title="資產負債結構" className="lg:col-span-2">
-                    <DonutChart data={[
-                        { name: '資產', value: netWorthData.assets, color: '#38bdf8'},
-                        { name: '負債', value: netWorthData.liabilities, color: '#f43f5e'},
-                    ]} />
-                </Card>
-            </div>
+             </div>
         </div>
     );
 };
