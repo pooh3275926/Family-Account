@@ -33,17 +33,21 @@ const TrendChart: React.FC<{ data: { label: string; value: number }[]; stroke: s
     const chartHeight = height - padding.top - padding.bottom;
 
     const values = data.map(d => d.value);
-    const yMin = Math.min(...values, 0);
-    const yMax = Math.max(...values, 0);
-    const yRange = yMax - yMin === 0 ? 1 : yMax - yMin;
+    const yMin = Math.min(...values);
+    const yMax = Math.max(...values);
+    // Add some padding to the Y range so the line doesn't touch the top/bottom exactly if flat
+    const yPadding = (yMax - yMin) * 0.1 || 100; 
+    const domainMin = yMin - yPadding;
+    const domainMax = yMax + yPadding;
+    const yRange = domainMax - domainMin;
     
-    const yScale = (val: number) => padding.top + chartHeight - ((val - yMin) / yRange) * chartHeight;
+    const yScale = (val: number) => padding.top + chartHeight - ((val - domainMin) / yRange) * chartHeight;
     const xScale = (index: number) => padding.left + (index / (data.length - 1)) * chartWidth;
 
     const pathData = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.value)}`).join(' ');
 
     const yTicksCount = 5;
-    const yTickValues = Array.from({ length: yTicksCount }, (_, i) => yMin + i * (yRange / (yTicksCount - 1)));
+    const yTickValues = Array.from({ length: yTicksCount }, (_, i) => domainMin + i * (yRange / (yTicksCount - 1)));
     
     const xTicks = data.filter((d, i) => i === 0 || (i+1) % 3 === 0 || i === data.length - 1);
 
@@ -83,12 +87,9 @@ const DashboardView: React.FC = () => {
     const availableYears = useMemo(() => {
         const years = new Set(journalEntries.map(e => new Date(e.date).getFullYear()));
         if (years.size === 0) years.add(today.getFullYear());
-        // FIX: Explicitly type sort function parameters to resolve arithmetic operation error on 'unknown' types.
         return Array.from(years).sort((a: number, b: number) => b - a);
     }, [journalEntries]);
     
-    const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || '未知科目';
-
     // --- Data Calculations ---
 
     const filteredEntries = useMemo(() => {
@@ -151,7 +152,6 @@ const DashboardView: React.FC = () => {
             !entry.lines.some(line => line.memo.includes('結轉損益'))
         );
         
-        let cumulativeNetIncome = 0;
         const trendData = [];
 
         for (let i = 1; i <= 12; i++) {
@@ -168,16 +168,65 @@ const DashboardView: React.FC = () => {
                 });
             });
             
-            cumulativeNetIncome += monthlyNetIncome;
-
+            // Modified to be monthly non-cumulative
             trendData.push({
                 label: `${i}月`,
-                value: cumulativeNetIncome,
+                value: monthlyNetIncome,
             });
         }
         return trendData;
     }, [journalEntries, selectedYear]);
 
+    const { assetsTrend, liabilitiesTrend } = useMemo(() => {
+        const startYearStr = `${selectedYear}-01-01`;
+        const endYearStr = `${selectedYear}-12-31`;
+
+        let assetOpening = 0;
+        let liabilityOpening = 0;
+        const monthlyAssetChange = new Array(12).fill(0);
+        const monthlyLiabilityChange = new Array(12).fill(0);
+
+        journalEntries.forEach(entry => {
+            const date = entry.date;
+            let assetChange = 0;
+            let liabilityChange = 0;
+
+            entry.lines.forEach(line => {
+                if (line.accountId.startsWith('1')) {
+                    assetChange += line.debit - line.credit;
+                } else if (line.accountId.startsWith('2')) {
+                    // Liability normal balance is credit, so add (credit - debit)
+                    liabilityChange += line.credit - line.debit;
+                }
+            });
+
+            if (date < startYearStr) {
+                assetOpening += assetChange;
+                liabilityOpening += liabilityChange;
+            } else if (date <= endYearStr) {
+                const monthIndex = parseInt(date.substring(5, 7), 10) - 1;
+                if (monthIndex >= 0 && monthIndex < 12) {
+                    monthlyAssetChange[monthIndex] += assetChange;
+                    monthlyLiabilityChange[monthIndex] += liabilityChange;
+                }
+            }
+        });
+
+        const assetData = [];
+        const liabilityData = [];
+        let currentAsset = assetOpening;
+        let currentLiability = liabilityOpening;
+
+        for (let i = 0; i < 12; i++) {
+            currentAsset += monthlyAssetChange[i];
+            currentLiability += monthlyLiabilityChange[i];
+            const label = `${i + 1}月`;
+            assetData.push({ label, value: currentAsset });
+            liabilityData.push({ label, value: currentLiability });
+        }
+
+        return { assetsTrend: assetData, liabilitiesTrend: liabilityData };
+    }, [journalEntries, selectedYear]);
 
     return (
         <div className="space-y-6">
@@ -229,8 +278,18 @@ const DashboardView: React.FC = () => {
                     </div>
                 </Card>
             </div>
+             
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card title={`${selectedYear}年 恩典的資產趨勢`} className="">
+                    <TrendChart data={assetsTrend} stroke="#0ea5e9" />
+                </Card>
+                <Card title={`${selectedYear}年 盼望的負債趨勢`} className="">
+                    <TrendChart data={liabilitiesTrend} stroke="#f43f5e" />
+                </Card>
+             </div>
+
              <div className="grid grid-cols-1 gap-6">
-                <Card title={`${selectedYear}年 本期恩典儲蓄趨勢（累計）`} className="">
+                <Card title={`${selectedYear}年 本期恩典儲蓄趨勢`} className="">
                     <TrendChart data={savingsTrend} stroke="#f97316" />
                 </Card>
              </div>
