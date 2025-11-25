@@ -36,6 +36,7 @@ type Action =
     | { type: 'ADD_JOURNAL_ENTRY'; payload: JournalEntry }
     | { type: 'UPDATE_JOURNAL_ENTRY'; payload: JournalEntry }
     | { type: 'DELETE_JOURNAL_ENTRY'; payload: string }
+    | { type: 'DELETE_ALL_JOURNAL_ENTRIES' }
     | { type: 'BULK_ADD_JOURNAL_ENTRIES'; payload: JournalEntry[] }
     | { type: 'ADD_CREDIT_CARD_LEDGER', payload: CreditCardLedger }
     | { type: 'UPDATE_CREDIT_CARD_LEDGER', payload: CreditCardLedger }
@@ -100,6 +101,11 @@ const appReducer = (state: AppState, action: Action): AppState => {
             return {
                 ...state,
                 journalEntries: state.journalEntries.filter(entry => entry.id !== action.payload),
+            };
+        case 'DELETE_ALL_JOURNAL_ENTRIES':
+            return {
+                ...state,
+                journalEntries: [],
             };
         case 'BULK_ADD_JOURNAL_ENTRIES': {
             const existingIds = new Set(state.journalEntries.map(entry => entry.id));

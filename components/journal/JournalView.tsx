@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import { JournalEntry } from '../../types';
@@ -14,6 +16,7 @@ const JournalView: React.FC = () => {
     const [entryToCopy, setEntryToCopy] = useState<JournalEntry | null>(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
     const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -52,6 +55,16 @@ const JournalView: React.FC = () => {
         setEntryToDelete(null);
     };
 
+    const handleDeleteAll = () => {
+        if (journalEntries.length === 0) return;
+        setIsDeleteAllConfirmOpen(true);
+    };
+
+    const confirmDeleteAll = () => {
+        dispatch({ type: 'DELETE_ALL_JOURNAL_ENTRIES' });
+        setIsDeleteAllConfirmOpen(false);
+    };
+
     const filteredEntries = useMemo(() => {
         if (!searchTerm) return journalEntries;
         const lowerCaseSearch = searchTerm.toLowerCase();
@@ -77,6 +90,13 @@ const JournalView: React.FC = () => {
                     </button>
                     <button onClick={() => setIsImportModalOpen(true)} className="flex items-center bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors duration-200 shadow">
                         <ClipboardPaste size={20} className="mr-2" /> 批次匯入
+                    </button>
+                    <button 
+                        onClick={handleDeleteAll} 
+                        disabled={journalEntries.length === 0}
+                        className="flex items-center bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition-colors duration-200 shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Trash2 size={20} className="mr-2" /> 全部刪除
                     </button>
                 </div>
             </div>
@@ -159,6 +179,21 @@ const JournalView: React.FC = () => {
                     onConfirm={confirmDelete}
                     title="確認刪除傳票"
                     message="您確定要刪除這筆傳票嗎？此操作無法復原。"
+                />
+            )}
+            {isDeleteAllConfirmOpen && (
+                <ConfirmationModal
+                    isOpen={isDeleteAllConfirmOpen}
+                    onClose={() => setIsDeleteAllConfirmOpen(false)}
+                    onConfirm={confirmDeleteAll}
+                    title="確認清空所有分錄"
+                    message={
+                        <div className="text-stone-200">
+                            <p className="font-bold text-lg text-rose-400 mb-2">警告：危險操作</p>
+                            <p>您確定要刪除<strong>所有</strong>日記帳分錄嗎？</p>
+                            <p className="mt-2 text-sm text-stone-400">此操作將清空所有帳務資料且<strong>無法復原</strong>。<br/>強烈建議您在執行此操作前先前往「備份與還原」下載備份檔案。</p>
+                        </div>
+                    }
                 />
             )}
         </div>
