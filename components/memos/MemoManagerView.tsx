@@ -102,7 +102,7 @@ const MemoManagerView: React.FC = () => {
                     memo.toLowerCase().includes(lowerSearch)
                 );
                 if (data.accountName.toLowerCase().includes(lowerSearch) || filteredMemoEntries.length > 0) {
-                     return [accountId, { ...data, memos: new Map<string, number>(filteredMemoEntries) }];
+                     return [accountId, { ...data, memos: new Map<string, number>(filteredMemoEntries as [string, number][]) }];
                 }
                 return null;
             })

@@ -1,14 +1,9 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
-import { ArrowUp, ArrowDown, PiggyBank, Calendar, Filter, ChevronDown, ChevronUp, CheckSquare, Square, Eye, EyeOff } from 'lucide-react';
+import { ArrowUp, ArrowDown, PiggyBank, Calendar, Filter, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 
 // --- Reusable SVG Chart Components ---
-
-const COLORS = [
-    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', 
-    '#f43f5e', '#6366f1', '#d946ef', '#eab308', '#14b8a6', '#f97316', '#a855f7'
-];
 
 interface ChartDataPoint {
     label: string;
@@ -332,7 +327,7 @@ const PeriodSelector: React.FC<{
         setSelectedMonths(new Set(ranges[type]));
     };
     
-    const sortedMonths = Array.from(selectedMonths).sort((a,b) => a-b);
+    const sortedMonths = Array.from(selectedMonths).sort((a: number, b: number) => a - b);
     const displaySelection = selectedMonths.size === 12 ? "全年" : 
                             selectedMonths.size === 0 ? "請選擇" :
                             `${sortedMonths[0]}月` + (selectedMonths.size > 1 ? `... (+${selectedMonths.size - 1})` : '');
@@ -404,10 +399,6 @@ const DashboardView: React.FC = () => {
     // Default to all months selected
     const [selectedMonths, setSelectedMonths] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]));
     
-    // Level 3 Trend State
-    const [selectedL3Id, setSelectedL3Id] = useState<string>('');
-    const [selectedL4Ids, setSelectedL4Ids] = useState<Set<string>>(new Set());
-
     // UI Toggle State
     const [showChartValues, setShowChartValues] = useState(false);
 
@@ -452,7 +443,7 @@ const DashboardView: React.FC = () => {
     // --- Main Trend Chart (Income/Expense/Net) ---
     // Follows the "period changes". Logic: Show breakdown for the *selected months* in chronological order.
     const mainTrendData = useMemo(() => {
-        const sortedMonths = Array.from(selectedMonths).sort((a,b) => a-b);
+        const sortedMonths = Array.from(selectedMonths).sort((a: number, b: number) => a - b);
         return sortedMonths.map(month => {
             let inc = 0, exp = 0;
             const monthEntries = yearEntriesPreClosing.filter(e => (new Date(e.date).getMonth() + 1) === month);
@@ -497,102 +488,62 @@ const DashboardView: React.FC = () => {
         });
     }, [yearEntriesPreClosing]);
 
-    // --- Level 3 Breakdown Trend ---
-    // User selects a Level 3 account (4/5/6/7). Chart shows Level 4 children.
-    // Affected by Year only.
-    const l3Options = useMemo(() => {
-        const unique = new Map<string, string>();
-        accounts.filter(a => ['4','5','6','7'].includes(a.level1[0])).forEach(a => {
-            if (a.level3 && !unique.has(a.level3)) {
-                unique.set(a.level3, a.level3);
-            }
-        });
-        return Array.from(unique.values()).sort();
-    }, [accounts]);
-    
-    // Set default L3 if not set
-    if (!selectedL3Id && l3Options.length > 0) setSelectedL3Id(l3Options[0]);
+    // --- Level 4 Trend Charts (Individual Accounts 4/5/6) ---
+    const level4ChartsData = useMemo(() => {
+        // Map<accountId, number[12]>
+        const monthlyData = new Map<string, number[]>();
+        const activeAccountIds = new Set<string>();
 
-    // Calculate available children accounts for the current L3
-    const currentChildrenAccounts = useMemo(() => {
-        if (!selectedL3Id) return [];
-        // Strict matching: account.level3 must exactly match selectedL3Id
-        return accounts.filter(a => a.level3 === selectedL3Id).sort((a,b) => a.id.localeCompare(b.id));
-    }, [selectedL3Id, accounts]);
-
-    // Initialize selected L4s when L3 changes (Default: Select only those with data)
-    useEffect(() => {
-        if (currentChildrenAccounts.length > 0) {
-            // Find which accounts have non-zero data in the current year
-            const activeIds = new Set<string>();
-            
-            // Optimization: Create a set of accounts used in the current year first to avoid O(N*M)
-            const usedAccountIds = new Set<string>();
-            yearEntriesPreClosing.forEach(e => {
-               e.lines.forEach(l => {
-                   if (l.debit !== 0 || l.credit !== 0) {
-                       usedAccountIds.add(l.accountId);
-                   }
-               });
-            });
-
-            currentChildrenAccounts.forEach(acc => {
-                if (usedAccountIds.has(acc.id)) {
-                    activeIds.add(acc.id);
+        yearEntriesPreClosing.forEach(entry => {
+            const monthIndex = new Date(entry.date).getMonth(); // 0-11
+            entry.lines.forEach(line => {
+                const prefix = line.accountId[0];
+                if (['4', '5', '6'].includes(prefix)) {
+                    if (line.debit === 0 && line.credit === 0) return;
+                    
+                    activeAccountIds.add(line.accountId);
+                    
+                    if (!monthlyData.has(line.accountId)) {
+                        monthlyData.set(line.accountId, new Array(12).fill(0));
+                    }
+                    
+                    const values = monthlyData.get(line.accountId)!;
+                    // Income (4): Credit - Debit
+                    // Expense (5,6): Debit - Credit
+                    const amount = prefix === '4' 
+                        ? (line.credit - line.debit)
+                        : (line.debit - line.credit);
+                        
+                    values[monthIndex] += amount;
                 }
             });
-            
-            setSelectedL4Ids(activeIds);
-        } else {
-            setSelectedL4Ids(new Set());
-        }
-    }, [currentChildrenAccounts, yearEntriesPreClosing]);
-
-    const l3TrendData = useMemo(() => {
-        if (!selectedL3Id) return { data: [], series: [] };
-        
-        // Use selectedL4Ids to filter
-        const activeChildren = currentChildrenAccounts.filter(a => selectedL4Ids.has(a.id));
-        
-        // Prepare Series config
-        const series: SeriesConfig[] = activeChildren.map((a, index) => ({
-            key: a.id,
-            name: a.name,
-            color: COLORS[index % COLORS.length],
-            type: 'line'
-        }));
-
-        // Aggregate Data (12 months)
-        const months = Array.from({ length: 12 }, (_, i) => i + 1);
-        const data = months.map(m => {
-             const point: ChartDataPoint = { label: `${m}月` };
-             activeChildren.forEach(acc => {
-                 let val = 0;
-                 const isExpense = ['5','6','72'].includes(acc.id[0]);
-                 
-                 yearEntriesPreClosing
-                    .filter(e => (new Date(e.date).getMonth() + 1) === m)
-                    .forEach(e => {
-                        e.lines.filter(l => l.accountId === acc.id).forEach(l => {
-                            // If expense, Debit is positive. If Income, Credit is positive.
-                            val += isExpense ? (l.debit - l.credit) : (l.credit - l.debit);
-                        });
-                    });
-                 point[acc.id] = val;
-             });
-             return point;
         });
 
-        return { data, series };
+        const sortedAccounts = accounts
+            .filter(a => activeAccountIds.has(a.id))
+            .sort((a, b) => a.id.localeCompare(b.id));
 
-    }, [selectedL3Id, selectedL4Ids, currentChildrenAccounts, yearEntriesPreClosing]);
+        return sortedAccounts.map(acc => {
+            const values = monthlyData.get(acc.id) || new Array(12).fill(0);
+            const chartData = values.map((val, idx) => ({
+                label: `${idx + 1}月`,
+                value: val
+            }));
+            
+            // Determine color based on type
+            let color = '#3b82f6'; 
+            if (acc.id.startsWith('4')) color = '#10b981'; // Income Green
+            else if (acc.id.startsWith('5')) color = '#f59e0b'; // Expense Fixed Amber
+            else if (acc.id.startsWith('6')) color = '#ef4444'; // Expense Daily Red
 
-    const toggleL4Selection = (id: string) => {
-        const newSet = new Set(selectedL4Ids);
-        if (newSet.has(id)) newSet.delete(id);
-        else newSet.add(id);
-        setSelectedL4Ids(newSet);
-    };
+            return {
+                id: acc.id,
+                name: acc.name,
+                data: chartData,
+                color
+            };
+        });
+    }, [yearEntriesPreClosing, accounts]);
 
     // --- Expense/Income Composition (Existing logic adapted) ---
     const expenseData = useMemo(() => {
@@ -840,66 +791,20 @@ const DashboardView: React.FC = () => {
                 </Card>
              </div>
 
-             {/* Row 8: L3 Trend - Increased Height */}
-             <div className="grid grid-cols-1 gap-6">
-                 <Card title="三階科目趨勢分析 (細項變動)" className="h-[40rem]">
-                     <div className="flex flex-col h-full gap-4">
-                        <div className="flex flex-wrap items-center gap-4 shrink-0 bg-stone-800/50 p-2 rounded">
-                             <div className="flex items-center gap-2">
-                                <label className="text-sm text-stone-300 font-bold">選擇三階科目:</label>
-                                <select 
-                                    value={selectedL3Id} 
-                                    onChange={e => setSelectedL3Id(e.target.value)} 
-                                    className="bg-stone-800 border border-stone-600 rounded p-1.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"
-                                >
-                                    {l3Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                             </div>
-                             
-                             {currentChildrenAccounts.length > 0 && (
-                                <div className="flex flex-wrap gap-3 items-center border-l border-stone-600 pl-4">
-                                    <span className="text-sm text-stone-400">顯示項目:</span>
-                                    <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
-                                        <button 
-                                            onClick={() => setSelectedL4Ids(new Set(currentChildrenAccounts.map(a => a.id)))}
-                                            className="text-xs px-2 py-1 bg-stone-700 hover:bg-stone-600 rounded text-stone-300"
-                                        >
-                                            全選
-                                        </button>
-                                        <button 
-                                            onClick={() => setSelectedL4Ids(new Set())}
-                                            className="text-xs px-2 py-1 bg-stone-700 hover:bg-stone-600 rounded text-stone-300"
-                                        >
-                                            全不選
-                                        </button>
-                                        {currentChildrenAccounts.map(acc => (
-                                            <button 
-                                                key={acc.id}
-                                                onClick={() => toggleL4Selection(acc.id)}
-                                                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
-                                                    selectedL4Ids.has(acc.id) 
-                                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200' 
-                                                        : 'bg-stone-800 border-stone-600 text-stone-500'
-                                                }`}
-                                            >
-                                                {selectedL4Ids.has(acc.id) ? <CheckSquare size={12}/> : <Square size={12}/>}
-                                                {acc.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                             )}
-                        </div>
-                        <div className="flex-grow min-h-0 relative">
-                            <CompositeChart 
-                                data={l3TrendData.data} 
-                                series={l3TrendData.series} 
-                                showValues={showChartValues}
-                            />
-                        </div>
-                     </div>
-                 </Card>
-             </div>
+             {/* Row 8: Level 4 Individual Trends */}
+             {level4ChartsData.map(chart => (
+                 <div key={chart.id} className="grid grid-cols-1 gap-6">
+                    <Card title={`${chart.id} ${chart.name} (年度趨勢)`} className="h-80">
+                        <CompositeChart 
+                            data={chart.data} 
+                            series={[{ key: 'value', name: '金額', color: chart.color }]} 
+                            showLegend={false}
+                            yAxisMinZero={true}
+                            showValues={showChartValues}
+                        />
+                    </Card>
+                 </div>
+             ))}
         </div>
     );
 };

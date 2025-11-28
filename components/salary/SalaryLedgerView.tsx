@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import { JournalLine, SalaryLedgerLine } from '../../types';
@@ -43,9 +44,7 @@ const SalaryLedgerView: React.FC = () => {
     };
     
     const totals = useMemo(() => {
-        // FIX: Changed type of `curr` to `any` to resolve "Property does not exist on type 'unknown'" error.
-        // This is necessary because `Object.values` may return an `unknown[]` depending on the TS config.
-        return Object.values(amounts).reduce((acc, curr: any) => {
+        return Object.values(amounts).reduce((acc, curr: { debit: number; credit: number }) => {
             acc.debit += curr.debit;
             acc.credit += curr.credit;
             return acc;
