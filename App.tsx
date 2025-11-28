@@ -1,9 +1,5 @@
-
-
-
-
 import React, { useState, useCallback, useMemo } from 'react';
-import { BookText, FileText, BarChart2, Settings, CreditCard, Menu, X, ClipboardList, ArchiveRestore, BookCopy, Briefcase, LayoutDashboard, Zap, ChevronDown, Database } from 'lucide-react';
+import { BookText, FileText, BarChart2, Settings, CreditCard, Menu, X, ClipboardList, ArchiveRestore, BookCopy, LayoutDashboard, Zap, ChevronDown, Database, WalletCards } from 'lucide-react';
 
 import { AppProvider } from './contexts/AppContext';
 import ChartOfAccountsView from './components/coa/ChartOfAccountsView';
@@ -14,26 +10,26 @@ import AmortizationTable from './components/amortization/AmortizationTable';
 import CreditCardLedgerView from './components/credit-card/CreditCardLedgerView';
 import PrepaymentTrackerView from './components/prepayments/PrepaymentTrackerView';
 import ReceivedPaymentTrackerView from './components/received-payments/ReceivedPaymentTrackerView';
+import PayableTrackerView from './components/payables/PayableTrackerView';
 import MemoManagerView from './components/memos/MemoManagerView';
-import SalaryLedgerView from './components/salary/SalaryLedgerView';
 import DashboardView from './components/dashboard/DashboardView';
 import ClosingView from './components/closing/ClosingView';
 import BackupRestoreView from './components/system/BackupRestoreView';
 
 
-type Page = 'dashboard' | 'journal' | 'credit-card' | 'salary' | 'closing' | 'coa' | 'amortization' | 'prepayments' | 'received-payments' | 'memos' | 'balance-sheet' | 'income-statement' | 'backup-restore';
+type Page = 'dashboard' | 'journal' | 'credit-card' | 'closing' | 'coa' | 'amortization' | 'prepayments' | 'received-payments' | 'payable-tracker' | 'memos' | 'balance-sheet' | 'income-statement' | 'backup-restore';
 
 
 const pageTitles: Record<Page, string> = {
     dashboard: '儀表板',
     journal: '日記簿',
     'credit-card': '信用卡帳務',
-    salary: '薪資分錄',
     closing: '結帳分錄',
     coa: '會計科目',
     amortization: '分攤費用表',
     prepayments: '暫付款追蹤表',
     'received-payments': '預收款項追蹤表',
+    'payable-tracker': '應付款項追蹤表',
     'balance-sheet': '資產負債表',
     'income-statement': '損益表',
     memos: '摘要管理器',
@@ -66,8 +62,8 @@ const App: React.FC = () => {
             case 'credit-card': return <CreditCardLedgerView />;
             case 'prepayments': return <PrepaymentTrackerView />;
             case 'received-payments': return <ReceivedPaymentTrackerView />;
+            case 'payable-tracker': return <PayableTrackerView />;
             case 'memos': return <MemoManagerView />;
-            case 'salary': return <SalaryLedgerView />;
             case 'closing': return <ClosingView />;
             case 'backup-restore': return <BackupRestoreView />;
             default: return <DashboardView />;
@@ -108,13 +104,13 @@ const App: React.FC = () => {
             <NavSection title="核心作業" isOpen={isCoreOpen} onToggle={() => setIsCoreOpen(!isCoreOpen)}>
                 <NavItem page="dashboard" label="儀表板" icon={LayoutDashboard} />
                 <NavItem page="journal" label="日記簿" icon={BookText} />
-                <NavItem page="salary" label="薪資分錄" icon={Briefcase} />
                 <NavItem page="closing" label="結帳分錄" icon={Zap} />
                 <NavItem page="credit-card" label="信用卡帳務" icon={CreditCard} />
             </NavSection>
             <NavSection title="功能選單" isOpen={isFeaturesOpen} onToggle={() => setIsFeaturesOpen(!isFeaturesOpen)}>
                 <NavItem page="amortization" label="分攤費用表" icon={ClipboardList} />
                 <NavItem page="prepayments" label="暫付款追蹤表" icon={ArchiveRestore} />
+                <NavItem page="payable-tracker" label="應付款項追蹤表" icon={WalletCards} />
                 <NavItem page="received-payments" label="預收款項追蹤表" icon={BookCopy} />
                 <NavItem page="memos" label="摘要管理器" icon={Settings} />
                 <NavItem page="coa" label="會計科目" icon={Settings} />
@@ -149,12 +145,12 @@ const App: React.FC = () => {
                             <div className="flex flex-col items-center space-y-3">
                                 <span title="儀表板"><LayoutDashboard onClick={() => handleSetPage('dashboard')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="日記簿"><BookText onClick={() => handleSetPage('journal')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
-                                <span title="薪資分錄"><Briefcase onClick={() => handleSetPage('salary')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="結帳分錄"><Zap onClick={() => handleSetPage('closing')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="信用卡帳務"><CreditCard onClick={() => handleSetPage('credit-card')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <div className="w-full border-t border-stone-600 my-2"></div>
                                 <span title="分攤費用表"><ClipboardList onClick={() => handleSetPage('amortization')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="暫付款追蹤表"><ArchiveRestore onClick={() => handleSetPage('prepayments')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
+                                <span title="應付款項追蹤表"><WalletCards onClick={() => handleSetPage('payable-tracker')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="預收款項追蹤表"><BookCopy onClick={() => handleSetPage('received-payments')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="摘要管理器"><Settings onClick={() => handleSetPage('memos')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>
                                 <span title="會計科目"><Settings onClick={() => handleSetPage('coa')} className="cursor-pointer text-stone-500 hover:text-stone-200" /></span>

@@ -28,6 +28,8 @@ interface AppState {
     salaryLedger: SalaryLedgerLine[];
 }
 
+export type RestoreMode = 'merge' | 'overwrite';
+
 type Action =
     | { type: 'SET_STATE'; payload: AppState }
     | { type: 'ADD_ACCOUNT'; payload: Account }
@@ -54,7 +56,8 @@ type Action =
     | { type: 'UPDATE_MANAGED_MEMO', payload: ManagedMemo }
     | { type: 'DELETE_MANAGED_MEMO', payload: string }
     | { type: 'UPDATE_MEMOS_BY_ACCOUNT', payload: { accountId: string; oldMemo: string; newMemo: string } }
-    | { type: 'MERGE_DATA'; payload: { newAccounts: Account[]; newJournalEntries: JournalEntry[] } }
+    | { type: 'MERGE_DATA'; payload: { newAccounts: Account[]; newJournalEntries: JournalEntry[] } } // Deprecated but kept for backward compatibility if needed internally
+    | { type: 'RESTORE_DATA'; payload: { backupAccounts: Account[]; backupEntries: JournalEntry[]; accountMode: RestoreMode; journalMode: RestoreMode } }
     | { type: 'UPDATE_SALARY_LEDGER', payload: SalaryLedgerLine[] }
     | { type: 'RESET_SALARY_LEDGER' };
 
@@ -141,6 +144,42 @@ const appReducer = (state: AppState, action: Action): AppState => {
                 accounts: [...state.accounts, ...newAccounts],
                 journalEntries: [...state.journalEntries, ...newJournalEntries]
                     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
+            };
+        }
+        case 'RESTORE_DATA': {
+            const { backupAccounts, backupEntries, accountMode, journalMode } = action.payload;
+            
+            let finalAccounts = state.accounts;
+            let finalEntries = state.journalEntries;
+
+            // Handle Accounts
+            if (accountMode === 'overwrite') {
+                finalAccounts = backupAccounts;
+            } else {
+                // Merge
+                const existingIds = new Set(state.accounts.map(a => a.id));
+                const newAccs = backupAccounts.filter(a => !existingIds.has(a.id));
+                finalAccounts = [...state.accounts, ...newAccs];
+            }
+            // Sort accounts by ID
+            finalAccounts.sort((a, b) => a.id.localeCompare(b.id));
+
+            // Handle Journal Entries
+            if (journalMode === 'overwrite') {
+                finalEntries = backupEntries;
+            } else {
+                // Merge
+                const existingIds = new Set(state.journalEntries.map(e => e.id));
+                const newEnts = backupEntries.filter(e => !existingIds.has(e.id));
+                finalEntries = [...state.journalEntries, ...newEnts];
+            }
+            // Sort entries
+            finalEntries.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+            return {
+                ...state,
+                accounts: finalAccounts,
+                journalEntries: finalEntries
             };
         }
         case 'ADD_CREDIT_CARD_LEDGER':

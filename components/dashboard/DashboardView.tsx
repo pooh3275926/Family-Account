@@ -489,6 +489,7 @@ const DashboardView: React.FC = () => {
     }, [yearEntriesPreClosing]);
 
     // --- Level 4 Trend Charts (Individual Accounts 4/5/6) ---
+    // User Requirement: 4, 5, 6 only. No 7. Individual chart per account. No data = hidden.
     const level4ChartsData = useMemo(() => {
         // Map<accountId, number[12]>
         const monthlyData = new Map<string, number[]>();
@@ -498,8 +499,10 @@ const DashboardView: React.FC = () => {
             const monthIndex = new Date(entry.date).getMonth(); // 0-11
             entry.lines.forEach(line => {
                 const prefix = line.accountId[0];
+                // STRICT FILTER: Only 4 (Income), 5 (Expense), 6 (Expense). Exclude 7.
                 if (['4', '5', '6'].includes(prefix)) {
-                    if (line.debit === 0 && line.credit === 0) return;
+                    // Skip transaction lines with 0 value to avoid marking account as active if it only has 0 entries
+                    if (Math.abs(line.debit) < 0.001 && Math.abs(line.credit) < 0.001) return;
                     
                     activeAccountIds.add(line.accountId);
                     
@@ -791,7 +794,7 @@ const DashboardView: React.FC = () => {
                 </Card>
              </div>
 
-             {/* Row 8: Level 4 Individual Trends */}
+             {/* Row 8: Level 4 Individual Trends - 4, 5, 6 only, no 7 */}
              {level4ChartsData.map(chart => (
                  <div key={chart.id} className="grid grid-cols-1 gap-6">
                     <Card title={`${chart.id} ${chart.name} (年度趨勢)`} className="h-80">

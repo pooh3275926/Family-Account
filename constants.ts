@@ -209,4 +209,3 @@ export const INITIAL_ACCOUNTS: Account[] = rawData
     return null;
   })
   .filter((account): account is Account => account !== null);
-

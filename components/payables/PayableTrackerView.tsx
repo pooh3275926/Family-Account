@@ -1,27 +1,27 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
-import { ClipboardList, ChevronDown, ChevronRight } from 'lucide-react';
+import { WalletCards, ChevronDown, ChevronRight } from 'lucide-react';
 
-const PrepaymentTrackerView: React.FC = () => {
+const PayableTrackerView: React.FC = () => {
     const { state } = useAppContext();
     const { accounts, journalEntries } = state;
     const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
     const reportData = useMemo(() => {
-        // 143-暫付單位, 144-暫付個人
-        const prepaymentAccounts = accounts.filter(a => a.level3.startsWith('143-') || a.level3.startsWith('144-'));
-        const prepaymentAccountIds = new Set(prepaymentAccounts.map(a => a.id));
+        // 251-應付款項
+        const payableAccounts = accounts.filter(a => a.level3.startsWith('251-'));
+        const accountIds = new Set(payableAccounts.map(a => a.id));
 
         const balances = new Map<string, number>();
         const transactionsByAccount = new Map<string, any[]>();
 
         journalEntries.forEach(entry => {
             entry.lines.forEach(line => {
-                if (prepaymentAccountIds.has(line.accountId)) {
-                    // Calculate balance
+                if (accountIds.has(line.accountId)) {
+                     // Calculate balance for Liability: Credit - Debit (Normally positive if owed)
+                     // If we strictly follow Asset (Debit+) / Liab (Credit+), then Balance = Credit - Debit.
                     const currentBalance = balances.get(line.accountId) || 0;
-                    balances.set(line.accountId, currentBalance + line.debit - line.credit);
-
+                    balances.set(line.accountId, currentBalance + line.credit - line.debit);
                     // Group transactions
                     if (!transactionsByAccount.has(line.accountId)) {
                         transactionsByAccount.set(line.accountId, []);
@@ -36,7 +36,7 @@ const PrepaymentTrackerView: React.FC = () => {
             });
         });
 
-        return prepaymentAccounts
+        return payableAccounts
             .map(account => ({
                 id: account.id,
                 name: account.name,
@@ -48,7 +48,7 @@ const PrepaymentTrackerView: React.FC = () => {
 
     }, [accounts, journalEntries]);
 
-     const toggleExpand = (accountId: string) => {
+    const toggleExpand = (accountId: string) => {
         setExpandedAccounts(prev => {
             const newSet = new Set(prev);
             if (newSet.has(accountId)) {
@@ -70,20 +70,20 @@ const PrepaymentTrackerView: React.FC = () => {
                     <thead className="text-xs text-stone-300 uppercase bg-stone-800 sticky top-0">
                         <tr>
                             <th className="px-6 py-3">科目 (對象)</th>
-                            <th className="px-6 py-3 text-right">目前餘額</th>
+                            <th className="px-6 py-3 text-right">目前欠款</th>
                         </tr>
                     </thead>
                     <tbody>
                         {reportData.length > 0 ? reportData.map(item => {
                             const isExpanded = expandedAccounts.has(item.id);
-                            return (
+                             return (
                                 <React.Fragment key={item.id}>
                                     <tr className="border-b bg-stone-900 border-stone-700 hover:bg-stone-800 cursor-pointer" onClick={() => toggleExpand(item.id)}>
                                         <td className="px-6 py-4 font-medium text-white flex items-center">
                                             {isExpanded ? <ChevronDown size={16} className="mr-2" /> : <ChevronRight size={16} className="mr-2" />}
                                             {item.id} - {item.name}
                                         </td>
-                                        <td className={`px-6 py-4 text-right font-mono font-bold text-stone-200`}>
+                                        <td className={`px-6 py-4 text-right font-mono font-bold text-rose-400`}>
                                             {item.balance.toLocaleString()}
                                         </td>
                                     </tr>
@@ -96,8 +96,8 @@ const PrepaymentTrackerView: React.FC = () => {
                                                             <tr className="border-b border-stone-700">
                                                                 <th className="p-2 text-left font-medium">日期</th>
                                                                 <th className="p-2 text-left font-medium">摘要</th>
-                                                                <th className="p-2 text-right font-medium">暫付 (借)</th>
-                                                                <th className="p-2 text-right font-medium">沖銷 (貸)</th>
+                                                                <th className="p-2 text-right font-medium">償還 (借)</th>
+                                                                <th className="p-2 text-right font-medium">新增 (貸)</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -118,11 +118,11 @@ const PrepaymentTrackerView: React.FC = () => {
                                 </React.Fragment>
                             );
                         }) : (
-                             <tr>
+                            <tr>
                                 <td colSpan={2} className="text-center py-16 text-stone-500">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <ClipboardList size={48} className="text-stone-600" />
-                                        <span>暫無任何暫付款資料</span>
+                                     <div className="flex flex-col items-center gap-4">
+                                        <WalletCards size={48} className="text-stone-600" />
+                                        <span>暫無任何應付款項資料</span>
                                     </div>
                                 </td>
                             </tr>
@@ -134,4 +134,4 @@ const PrepaymentTrackerView: React.FC = () => {
     );
 };
 
-export default PrepaymentTrackerView;
+export default PayableTrackerView;

@@ -1,15 +1,22 @@
+
 import React, { useRef, useState } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
-import { Download, Upload, AlertTriangle, CheckCircle } from 'lucide-react';
-import ConfirmationModal from '../ui/ConfirmationModal';
+import { Download, Upload, AlertTriangle, CheckCircle, Database } from 'lucide-react';
+import Modal from '../ui/Modal';
 import { Account, JournalEntry } from '../../types';
+
+type RestoreMode = 'merge' | 'overwrite';
 
 const BackupRestoreView: React.FC = () => {
     const { state, dispatch } = useAppContext();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [fileToRestore, setFileToRestore] = useState<File | null>(null);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+    const [tempBackupData, setTempBackupData] = useState<{ accounts: Account[], journalEntries: JournalEntry[] } | null>(null);
     const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+    
+    // Restore Options State
+    const [accountMode, setAccountMode] = useState<RestoreMode>('merge');
+    const [journalMode, setJournalMode] = useState<RestoreMode>('merge');
 
     const handleDownloadBackup = () => {
         try {
@@ -40,8 +47,35 @@ const BackupRestoreView: React.FC = () => {
         const file = event.target.files?.[0];
         if (file) {
             setFeedback(null);
-            setFileToRestore(file);
-            setIsConfirmOpen(true);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const text = e.target?.result;
+                    if (typeof text !== 'string') {
+                        throw new Error('無法讀取檔案內容。');
+                    }
+                    const backupData = JSON.parse(text);
+
+                    // Basic validation
+                    if (!Array.isArray(backupData.accounts) || !Array.isArray(backupData.journalEntries)) {
+                        throw new Error('檔案格式不符，缺少會計科目或日記帳資料。');
+                    }
+                    
+                    setTempBackupData(backupData);
+                    // Reset defaults
+                    setAccountMode('merge');
+                    setJournalMode('merge');
+                    setIsRestoreModalOpen(true);
+
+                } catch (error: any) {
+                    console.error('Failed to parse backup:', error);
+                    setFeedback({ type: 'error', message: `讀取檔案失敗：${error.message}` });
+                }
+            };
+            reader.onerror = () => {
+                setFeedback({ type: 'error', message: '讀取檔案時發生錯誤。' });
+            };
+            reader.readAsText(file);
         }
         // Reset file input value to allow selecting the same file again
         if(fileInputRef.current) {
@@ -49,53 +83,34 @@ const BackupRestoreView: React.FC = () => {
         }
     };
 
-    const handleConfirmRestore = () => {
-        if (!fileToRestore) return;
+    const handleExecuteRestore = () => {
+        if (!tempBackupData) return;
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const text = e.target?.result;
-                if (typeof text !== 'string') {
-                    throw new Error('無法讀取檔案內容。');
+        try {
+            dispatch({
+                type: 'RESTORE_DATA',
+                payload: {
+                    backupAccounts: tempBackupData.accounts,
+                    backupEntries: tempBackupData.journalEntries,
+                    accountMode,
+                    journalMode
                 }
-                const backupData = JSON.parse(text);
+            });
+            
+            const accAction = accountMode === 'merge' ? '合併' : '覆蓋';
+            const jrnAction = journalMode === 'merge' ? '合併' : '覆蓋';
 
-                // Basic validation
-                if (!Array.isArray(backupData.accounts) || !Array.isArray(backupData.journalEntries)) {
-                    throw new Error('檔案格式不符，缺少會計科目或日記帳資料。');
-                }
+            setFeedback({ 
+                type: 'success', 
+                message: `還原完成！ 會計科目: ${accAction}, 日記帳: ${jrnAction}。` 
+            });
 
-                const existingAccountIds = new Set(state.accounts.map(a => a.id));
-                const newAccounts = backupData.accounts.filter((a: Account) => a.id && !existingAccountIds.has(a.id));
-
-                const existingEntryIds = new Set(state.journalEntries.map(j => j.id));
-                const newJournalEntries = backupData.journalEntries.filter((j: JournalEntry) => j.id && !existingEntryIds.has(j.id));
-                
-                if (newAccounts.length > 0 || newJournalEntries.length > 0) {
-                    dispatch({
-                        type: 'MERGE_DATA',
-                        payload: { newAccounts, newJournalEntries }
-                    });
-                     setFeedback({ type: 'success', message: `資料合併成功！新增 ${newAccounts.length} 個會計科目，${newJournalEntries.length} 筆傳票。` });
-                } else {
-                    setFeedback({ type: 'success', message: '資料比對完成，沒有需要新增的資料。' });
-                }
-
-            } catch (error: any) {
-                console.error('Failed to restore from backup:', error);
-                setFeedback({ type: 'error', message: `還原失敗：${error.message}` });
-            } finally {
-                setIsConfirmOpen(false);
-                setFileToRestore(null);
-            }
-        };
-        reader.onerror = () => {
-            setFeedback({ type: 'error', message: '讀取檔案時發生錯誤。' });
-            setIsConfirmOpen(false);
-            setFileToRestore(null);
-        };
-        reader.readAsText(fileToRestore);
+        } catch (error: any) {
+            setFeedback({ type: 'error', message: `還原過程發生錯誤：${error.message}` });
+        } finally {
+            setIsRestoreModalOpen(false);
+            setTempBackupData(null);
+        }
     };
 
     return (
@@ -116,11 +131,11 @@ const BackupRestoreView: React.FC = () => {
 
             <div className="bg-stone-900 p-6 rounded-xl shadow-lg border border-rose-500/30">
                 <h3 className="text-xl font-bold text-rose-400 mb-4 flex items-center">
-                    <AlertTriangle size={22} className="mr-3" />
+                    <Database size={22} className="mr-3" />
                     資料還原
                 </h3>
                 <p className="text-stone-400 mb-6">
-                    從備份檔案還原將會**合併**資料。系統會跳過已存在的科目或傳票編號，僅新增檔案中不存在的資料。此操作無法復原。
+                    上傳備份檔案後，您可以選擇要**合併**（保留現有，新增缺少）或**覆蓋**（完全使用備份檔）資料。
                 </p>
                 <input
                     type="file"
@@ -145,21 +160,123 @@ const BackupRestoreView: React.FC = () => {
                 </div>
             )}
 
-            {isConfirmOpen && (
-                 <ConfirmationModal
-                    isOpen={isConfirmOpen}
-                    onClose={() => setIsConfirmOpen(false)}
-                    onConfirm={handleConfirmRestore}
-                    title="確認合併資料"
-                    message={
-                        <div className="text-sm text-stone-300">
-                           <p className="font-bold text-base text-stone-100 mb-2">您確定要繼續嗎？</p>
-                           <p>系統將會讀取檔案 <strong className="text-amber-400">{fileToRestore?.name}</strong>，</p>
-                           <p className="font-bold text-amber-300 my-2">並將新的會計科目與傳票新增至您目前的帳務中。</p>
-                           <p>任何已存在的資料將會被忽略，此操作無法復原。</p>
+            {isRestoreModalOpen && (
+                 <Modal
+                    isOpen={isRestoreModalOpen}
+                    onClose={() => {
+                        setIsRestoreModalOpen(false);
+                        setTempBackupData(null);
+                    }}
+                    title="資料還原選項"
+                >
+                    <div className="space-y-6">
+                        <div className="bg-amber-900/20 p-4 rounded-lg flex items-start">
+                            <AlertTriangle className="text-amber-500 mr-3 shrink-0 mt-0.5" size={20} />
+                            <div className="text-sm text-amber-200">
+                                <p>請選擇還原模式。若選擇「覆蓋」，原本的資料將會被備份檔案中的資料完全取代且無法復原。</p>
+                            </div>
                         </div>
-                    }
-                />
+
+                        {/* Account Options */}
+                        <div className="bg-stone-800 p-4 rounded-lg border border-stone-700">
+                            <h4 className="font-bold text-stone-200 mb-3 flex items-center">
+                                <span className="bg-stone-700 px-2 py-0.5 rounded text-xs mr-2">1</span>
+                                會計科目 (Chart of Accounts)
+                            </h4>
+                            <div className="space-y-2">
+                                <label className="flex items-center p-2 rounded cursor-pointer hover:bg-stone-700/50">
+                                    <input 
+                                        type="radio" 
+                                        name="accountMode" 
+                                        value="merge" 
+                                        checked={accountMode === 'merge'} 
+                                        onChange={() => setAccountMode('merge')}
+                                        className="w-4 h-4 text-amber-600 bg-stone-700 border-stone-500 focus:ring-amber-500"
+                                    />
+                                    <div className="ml-3">
+                                        <span className="block text-sm font-medium text-stone-200">合併 (Merge)</span>
+                                        <span className="block text-xs text-stone-400">保留現有科目，僅新增備份中獨有的新科目。</span>
+                                    </div>
+                                </label>
+                                <label className="flex items-center p-2 rounded cursor-pointer hover:bg-stone-700/50">
+                                    <input 
+                                        type="radio" 
+                                        name="accountMode" 
+                                        value="overwrite" 
+                                        checked={accountMode === 'overwrite'} 
+                                        onChange={() => setAccountMode('overwrite')}
+                                        className="w-4 h-4 text-rose-600 bg-stone-700 border-stone-500 focus:ring-rose-500"
+                                    />
+                                    <div className="ml-3">
+                                        <span className="block text-sm font-medium text-rose-300">覆蓋 (Overwrite)</span>
+                                        <span className="block text-xs text-stone-400">刪除所有現有科目，完全使用備份檔中的科目表。</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Journal Options */}
+                        <div className="bg-stone-800 p-4 rounded-lg border border-stone-700">
+                            <h4 className="font-bold text-stone-200 mb-3 flex items-center">
+                                <span className="bg-stone-700 px-2 py-0.5 rounded text-xs mr-2">2</span>
+                                日記帳分錄 (Journal Entries)
+                            </h4>
+                            <div className="space-y-2">
+                                <label className="flex items-center p-2 rounded cursor-pointer hover:bg-stone-700/50">
+                                    <input 
+                                        type="radio" 
+                                        name="journalMode" 
+                                        value="merge" 
+                                        checked={journalMode === 'merge'} 
+                                        onChange={() => setJournalMode('merge')}
+                                        className="w-4 h-4 text-amber-600 bg-stone-700 border-stone-500 focus:ring-amber-500"
+                                    />
+                                    <div className="ml-3">
+                                        <span className="block text-sm font-medium text-stone-200">合併 (Merge)</span>
+                                        <span className="block text-xs text-stone-400">保留現有分錄，僅新增備份中獨有的新分錄 (依傳票ID比對)。</span>
+                                    </div>
+                                </label>
+                                <label className="flex items-center p-2 rounded cursor-pointer hover:bg-stone-700/50">
+                                    <input 
+                                        type="radio" 
+                                        name="journalMode" 
+                                        value="overwrite" 
+                                        checked={journalMode === 'overwrite'} 
+                                        onChange={() => setJournalMode('overwrite')}
+                                        className="w-4 h-4 text-rose-600 bg-stone-700 border-stone-500 focus:ring-rose-500"
+                                    />
+                                    <div className="ml-3">
+                                        <span className="block text-sm font-medium text-rose-300">覆蓋 (Overwrite)</span>
+                                        <span className="block text-xs text-stone-400">刪除所有現有分錄，完全使用備份檔中的日記帳。</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button
+                                onClick={() => {
+                                    setIsRestoreModalOpen(false);
+                                    setTempBackupData(null);
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-stone-300 bg-stone-800 border border-stone-600 rounded-lg hover:bg-stone-700"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleExecuteRestore}
+                                className={`px-4 py-2 text-sm font-medium text-white rounded-lg shadow-lg flex items-center ${
+                                    (accountMode === 'overwrite' || journalMode === 'overwrite') 
+                                    ? 'bg-rose-600 hover:bg-rose-700' 
+                                    : 'bg-amber-600 hover:bg-amber-700'
+                                }`}
+                            >
+                                <Database size={16} className="mr-2" />
+                                確認還原
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             )}
         </div>
     );

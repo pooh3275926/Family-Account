@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
-import { Zap } from 'lucide-react';
+import { Zap, CheckCircle } from 'lucide-react';
 import { JournalEntry } from '../../types';
+import Modal from '../ui/Modal';
 
 const ClosingView: React.FC = () => {
     const { state, dispatch } = useAppContext();
@@ -9,6 +10,7 @@ const ClosingView: React.FC = () => {
 
     const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [generatedEntry, setGeneratedEntry] = useState<JournalEntry | null>(null);
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
 
     const availableMonths = useMemo(() => {
         const allMonths = new Set<string>();
@@ -22,10 +24,10 @@ const ClosingView: React.FC = () => {
         const closedMonths = new Set<string>();
         journalEntries.forEach(entry => {
             const month = entry.date.substring(0, 7);
-            const isClosing = entry.lines.some(line =>
+            const isClosingEntry = entry.lines.some(line =>
                 line.memo.includes('結轉損益')
             );
-            if (isClosing) {
+            if (isClosingEntry) {
                 closedMonths.add(month);
             }
         });
@@ -115,9 +117,9 @@ const ClosingView: React.FC = () => {
             payload: newEntry
         });
 
-        alert("結帳分錄已成功建立！");
         setSelectedMonth(''); // Reset selection
         setGeneratedEntry(newEntry);
+        setSuccessModalOpen(true);
     };
 
     return (
@@ -185,6 +187,31 @@ const ClosingView: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {successModalOpen && (
+                 <Modal
+                    isOpen={successModalOpen}
+                    onClose={() => setSuccessModalOpen(false)}
+                    title="結帳成功"
+                    size="sm"
+                >
+                    <div className="text-center p-4">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-900/50 mb-4">
+                            <CheckCircle className="h-8 w-8 text-emerald-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-stone-100 mb-2">結帳分錄已成功建立！</h3>
+                        <p className="text-sm text-stone-400 mb-6">
+                            系統已將該月份的損益結轉至歷年恩典儲蓄。
+                        </p>
+                        <button
+                            onClick={() => setSuccessModalOpen(false)}
+                            className="w-full px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:ring-4 focus:outline-none focus:ring-emerald-800"
+                        >
+                            確定
+                        </button>
+                    </div>
+                </Modal>
             )}
         </div>
     );

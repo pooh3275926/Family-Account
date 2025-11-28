@@ -16,7 +16,8 @@ const btnClasses = {
 
 const LedgerForm: React.FC<{ ledger: CreditCardLedger | null, onClose: () => void }> = ({ ledger, onClose }) => {
     const { state, dispatch } = useAppContext();
-    const liabilityAccounts = state.accounts.filter(a => a.id.startsWith('241'));
+    // SPECIFIC REQUIREMENT: Only 2411, 2421, 2422
+    const liabilityAccounts = state.accounts.filter(a => ['2411', '2421', '2422'].includes(a.id));
     const [name, setName] = useState(ledger?.name || '');
     const [liabilityAccountId, setLiabilityAccountId] = useState(ledger?.liabilityAccountId || '');
 
@@ -29,7 +30,6 @@ const LedgerForm: React.FC<{ ledger: CreditCardLedger | null, onClose: () => voi
             transactions: ledger?.transactions || []
         };
         if (ledger) {
-            // FIX: Corrected a typo in the dispatch action type. 'UPDATE_CRED-IT_CARD_LEDGER' should be 'UPDATE_CREDIT_CARD_LEDGER'.
             dispatch({ type: 'UPDATE_CREDIT_CARD_LEDGER', payload });
         } else {
             dispatch({ type: 'ADD_CREDIT_CARD_LEDGER', payload });
