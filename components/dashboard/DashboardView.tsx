@@ -464,8 +464,8 @@ const DashboardView: React.FC = () => {
     const creditCardTrendData = useMemo(() => {
         const targets = [
             { id: '2411', name: '君如-中信' },
-            { id: '2412', name: '微光-中信' },
-            { id: '2413', name: '微光-台新' }
+            { id: '2421', name: '微光-中信' },
+            { id: '2422', name: '微光-台新' }
         ];
 
         // For trend, we show 12 months regardless of month filter (user request: "not affected by top period filter, only year")
