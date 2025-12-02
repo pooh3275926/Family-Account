@@ -749,7 +749,7 @@ const DashboardView: React.FC = () => {
 
              {/* Row 6: Savings - Independent Row */}
              <div className="grid grid-cols-1 gap-6">
-                <Card title={`${selectedYear}年 本期恩典儲蓄趨勢 (每月)`} className="h-80">
+                <Card title={`${selectedYear}年 本期恩典儲蓄趨勢`} className="h-80">
                      <CompositeChart 
                         data={savingsTrend} 
                         series={[{ key: 'value', name: '單月儲蓄', color: '#f97316' }]} 
@@ -761,7 +761,7 @@ const DashboardView: React.FC = () => {
 
              {/* Row 7: Credit Card Trends - Independent Row Section - Each gets a full row */}
              <div className="grid grid-cols-1 gap-6">
-                <Card title="君如-中信信用卡 (消費趨勢)" className="h-80">
+                <Card title="君如-中信信用卡" className="h-80">
                     <CompositeChart 
                         data={creditCardTrendData} 
                         series={[{ key: '2411', name: '每月新增消費', color: '#f59e0b' }]} 
@@ -772,10 +772,10 @@ const DashboardView: React.FC = () => {
                 </Card>
              </div>
              <div className="grid grid-cols-1 gap-6">
-                <Card title="微光-中信信用卡 (消費趨勢)" className="h-80">
+                <Card title="微光-中信信用卡" className="h-80">
                     <CompositeChart 
                         data={creditCardTrendData} 
-                        series={[{ key: '2412', name: '每月新增消費', color: '#10b981' }]} 
+                        series={[{ key: '2421', name: '每月新增消費', color: '#10b981' }]} 
                         showLegend={false}
                         yAxisMinZero={true}
                         showValues={showChartValues}
@@ -783,10 +783,10 @@ const DashboardView: React.FC = () => {
                 </Card>
              </div>
              <div className="grid grid-cols-1 gap-6">
-                <Card title="微光-台新信用卡 (消費趨勢)" className="h-80">
+                <Card title="微光-台新信用卡" className="h-80">
                     <CompositeChart 
                         data={creditCardTrendData} 
-                        series={[{ key: '2413', name: '每月新增消費', color: '#ec4899' }]} 
+                        series={[{ key: '2422', name: '每月新增消費', color: '#ec4899' }]} 
                         showLegend={false}
                         yAxisMinZero={true}
                         showValues={showChartValues}
